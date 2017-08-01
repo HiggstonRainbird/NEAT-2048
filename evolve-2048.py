@@ -2,6 +2,7 @@
 2048 Player.
 
 Written July 31st, 2017.
+Last updated August 1st, 2017.
 
 The goal of this program is to evolve a bot that can play 2048.
 
@@ -30,6 +31,8 @@ and scaled like this:
 
 oldBoard = [[0,0,1./7,1./7],[0,0,1./7,2./7],[1./7,1./7,2./7,4./7],[3./7,5./7,7./7,5./7]]
 
+Moves are formatted as [a,b,c,d], where a represents the weight of moving to the right, b the weight of moving down, etc.
+
 Upon a move, the program goes through each row or column:
     First, the row is sorted, with all non-zero elements considered identical.
     Second, each pair of identical elements are combined, the empty space replaced with a zero, and the score incremented.
@@ -37,7 +40,11 @@ Upon a move, the program goes through each row or column:
 After each row or column has been scanned, the high score is increased (if necessary).
 Finally, a 2 or 4 is spawned randomly in one of the positions currently occupied by 0.
     A 4 has a 10% chance of spawning, while a 2 has a 90% chance.
-The fitness function is the score of the game, which is incremented by the value of any newly created block.
+
+The fitness function is in two parts:
+    First, it is the score of the game, which is incremented by the value of any newly created block.
+    The score is then multiplied by twice the standard deviation of the input vector, as a penalty for having all inputs be the same.
+    The d
 
 This would likely be a LOT faster using numpy arrays rather than python lists of lists.
 """
@@ -51,6 +58,7 @@ import math
 import random
 import copy
 import time
+import numpy
 
 
 # Note: This doesn't actually work yet.  I haven't finished debugging it.
@@ -132,7 +140,7 @@ def eval_genomes(genomes, config):
                     if False in [currentBoard[i][j]==newBoard[i][j] for i in range(4) for j in range(4)]:
                         currentBoard = copy.deepcopy(newBoard)
                         h = newHighValue
-                        genome.fitness = newScore
+                        genome.fitness += (newScore - genome.fitness) * numpy.std(moveMatrix)
                         gameOver = False
                         #[print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
                         #print("")
@@ -166,7 +174,7 @@ def run(config_file):
     winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
     oldScore = 0.0
     gameOver = False
-    currentBoard = [[0,0,0,0],[0,2,0,0],[0,0,4,0],[0,0,0,0]]
+    currentBoard = [[0,0,0,0],[0,.5,0,0],[0,0,1,0],[0,0,0,0]]
     h = 4
     while not gameOver:
         moveMatrix = winner_net.activate([currentBoard[i][j] for i in range(4) for j in range(4)])
@@ -176,12 +184,15 @@ def run(config_file):
             if False in [currentBoard[i][j]==newBoard[i][j] for i in range(4) for j in range(4)]:
                 currentBoard = copy.deepcopy(newBoard)
                 h = newHighValue
-                oldScore = newScore
+                oldScore += (newScore - oldScore) * numpy.std(moveMatrix)
                 gameOver = False
+                [print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
+                print("")
+                time.sleep(1)
                 break
     print("Winning Score: {!r}, highest-valued tile {!r}".format(oldScore, h))
     print("Final board state: ")
-    [print([2**(i*math.log(h,2)) if i!=0 else 0 for i in row]) for row in currentBoard]
+    [print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
 
     node_names = {
         -1: '1,1', -2: '1,2', -3: '1,3', -4: '1,4',
