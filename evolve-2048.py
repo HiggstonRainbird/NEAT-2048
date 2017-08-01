@@ -44,9 +44,14 @@ Finally, a 2 or 4 is spawned randomly in one of the positions currently occupied
 The fitness function is in two parts:
     First, it is the score of the game, which is incremented by the value of any newly created block.
     The score is then multiplied by twice the standard deviation of the input vector, as a penalty for having all inputs be the same.
-    The d
+    This is not ideal, as the maximum for the standard deviation is [1,0,0,1], not [1,0,0,0], but it'll do for a start.
 
-This would likely be a LOT faster using numpy arrays rather than python lists of lists.
+TODO:
+    Use numpy arrays rather than python lists of lists.
+    Use cProfile to analyze chokepoints in the code.
+        $ python -m cProfile -o 2048.cprof evolve-2048.py
+        $ pyprof2calltree -k -i 2048.cprof
+    Replace standard deviation with something better.
 """
 
 from __future__ import print_function
@@ -140,7 +145,7 @@ def eval_genomes(genomes, config):
                     if False in [currentBoard[i][j]==newBoard[i][j] for i in range(4) for j in range(4)]:
                         currentBoard = copy.deepcopy(newBoard)
                         h = newHighValue
-                        genome.fitness += (newScore - genome.fitness) * numpy.std(moveMatrix)
+                        genome.fitness += (newScore - genome.fitness) * (2.0 * numpy.std(moveMatrix))
                         gameOver = False
                         #[print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
                         #print("")
@@ -184,11 +189,11 @@ def run(config_file):
             if False in [currentBoard[i][j]==newBoard[i][j] for i in range(4) for j in range(4)]:
                 currentBoard = copy.deepcopy(newBoard)
                 h = newHighValue
-                oldScore += (newScore - oldScore) * numpy.std(moveMatrix)
+                oldScore += (newScore - oldScore)
                 gameOver = False
-                [print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
-                print("")
-                time.sleep(1)
+                #[print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
+                #print("")
+                #time.sleep(1)
                 break
     print("Winning Score: {!r}, highest-valued tile {!r}".format(oldScore, h))
     print("Final board state: ")
