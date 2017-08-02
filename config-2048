@@ -6,14 +6,14 @@ reset_on_extinction   = False
 
 [DefaultGenome]
 # node activation options
-activation_default      = tanh
-activation_mutate_rate  = 0.1
-activation_options      = tanh relu sigmoid
+activation_default      = sigmoid
+activation_mutate_rate  = 0.0
+activation_options      = gauss sigmoid
 
 # node aggregation options
-aggregation_default     = sum
-aggregation_mutate_rate = 0.1
-aggregation_options     = sum min max
+aggregation_default     = equal
+aggregation_mutate_rate = 0.2
+aggregation_options     = equal sum
 
 # node bias options
 bias_init_mean          = 0.0
@@ -33,18 +33,18 @@ conn_add_prob           = 0.5
 conn_delete_prob        = 0.5
 
 # connection enable options
-enabled_default         = False
-enabled_mutate_rate     = 0.01
+enabled_default         = True
+enabled_mutate_rate     = 0.0
 
 feed_forward            = False
-initial_connection      = unconnected
+initial_connection      = full_direct
 
 # node add/remove rates
 node_add_prob           = 0.25
 node_delete_prob        = 0.25
 
 # network parameters
-num_hidden              = 0
+num_hidden              = 8
 num_inputs              = 16
 num_outputs             = 4
 

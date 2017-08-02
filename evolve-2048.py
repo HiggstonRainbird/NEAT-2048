@@ -29,8 +29,6 @@ and scaled like this:
     1/7     1/7   2/7     4/7
     3/7     5/7   1       5/7
 
-oldBoard = [[0,0,1./7,1./7],[0,0,1./7,2./7],[1./7,1./7,2./7,4./7],[3./7,5./7,7./7,5./7]]
-
 Moves are formatted as [a,b,c,d], where a represents the weight of moving to the right, b the weight of moving down, etc.
 
 Upon a move, the program goes through each row or column:
@@ -41,18 +39,13 @@ After each row or column has been scanned, the high score is increased (if neces
 Finally, a 2 or 4 is spawned randomly in one of the positions currently occupied by 0.
     A 4 has a 10% chance of spawning, while a 2 has a 90% chance.
 
-The fitness function is in two parts:
-    First, it is the score of the game, which is incremented by the value of any newly created block.
+The fitness function is the score of the game, which is incremented by the value of any newly created block.
     The score is then multiplied by twice the standard deviation of the input vector, as a penalty for having all inputs be the same.
-    This is not ideal, as the maximum for the standard deviation is [1,0,0,1], not [1,0,0,0], but it'll do for a start.
 
 TODO:
-    Use numpy arrays rather than python lists of lists.
     Use cProfile to analyze chokepoints in the code.
         $ python -m cProfile -o 2048.cprof evolve-2048.py
         $ pyprof2calltree -k -i 2048.cprof
-    Replace standard deviation with something that better emphasizes good ordering.  And also faster.
-    Fix floating point rounding problem.
 """
 
 from __future__ import print_function
@@ -63,65 +56,16 @@ import visualize
 import math
 import random
 import time
-import numpy
 
+from itertools import combinations
 
-def next_move(oldBoard, highValue, score, move):
-    board = [row[:] for row in oldBoard]
-    if move == 0:
-        for row in board:
-            row.sort(key = lambda x: 0 if x==0 else 1)
-            for i in range(3):
-                if row[i] == row[i+1] and row[i] != 0:
-                    row[i] += (1. / math.log(highValue,2))
-                    row[i+1] = 0
-                    score += round(2**(1.+row[i]*math.log(highValue,2)))
-            row.sort(key = lambda x: 0 if x==0 else 1)
-    elif move == 1:
-        board = map(list, zip(*board))
-        for row in board:
-            row.sort(key = lambda x: 0 if x==0 else 1)
-            for i in range(3):
-                if row[i] == row[i+1] and row[i] != 0:
-                    row[i] += (1. / math.log(highValue,2))
-                    row[i+1] = 0
-                    score += round(2**(1.+row[i]*math.log(highValue,2)))
-            row.sort(key = lambda x: 0 if x==0 else 1)
-        board = map(list, zip(*board))
-    elif move == 2:
-        for row in board:
-            row.sort(key = lambda x: 0 if x==0 else 1, reverse=True)
-            for i in range(3,0,-1):
-                if row[i] == row[i-1] and row[i] != 0:
-                    row[i-1] += (1. / math.log(highValue,2))
-                    row[i] = 0
-                    score += round(2**(1.+row[i]*math.log(highValue,2)))
-            row.sort(key = lambda x: 0 if x==0 else 1, reverse=True)
-    elif move == 3:
-        board = map(list, zip(*board))
-        for row in board:
-            row.sort(key = lambda x: 0 if x==0 else 1, reverse=True)
-            for i in range(3,0,-1):
-                if row[i] == row[i-1] and row[i] != 0:
-                    row[i-1] += (1. / math.log(highValue,2))
-                    row[i] = 0
-                    score += round(2**(1.+row[i]*math.log(highValue,2)))
-            row.sort(key = lambda x: 0 if x==0 else 1, reverse=True)
-        board = map(list, zip(*board))
-    if max([max(row) for row in board]) > 1:
-        board = [[elem*(math.log(highValue,2)/(math.log(highValue,2) + 1)) for elem in row] for row in board]
-        highValue = 2 * highValue
-    zeroPositions = []
-    for i in range(4):
-        for j in range(4):
-            if board[i][j] == 0:
-                zeroPositions.append([i,j])
-    try:
-        zeroPositions = random.choice(zeroPositions)
-        board[zeroPositions[0]][zeroPositions[1]] = ((1. / math.log(highValue,2)) if random.random() < 0.9 else (2. / math.log(highValue,2)))
-    except IndexError:
-        pass
-    return board, highValue, score
+def equal(x):
+    if x == []:
+        return 1
+    elif len(x) == 1:
+        return 1
+    else:
+        return 1 - min([abs(i[0]-i[1]) if min(i)!=0 else 1 for i in list(combinations(x,2))])
 
 def next_move(oldBoard, highValue, score, move):
     board = [row[:] for row in oldBoard]
@@ -165,7 +109,7 @@ def next_move(oldBoard, highValue, score, move):
                     score += round(2**(1.+row[i]))
             row.sort(key = lambda x: 0 if x==0 else 1, reverse=True)
         board = map(list, zip(*board))
-    if max([max(row) for row in board]) > highValue:
+    if max([max(row) for row in board]) > math.log(highValue,2):
         highValue = 2 * highValue
     zeroPositions = []
     for i in range(4):
@@ -184,7 +128,7 @@ def next_move(oldBoard, highValue, score, move):
 
 def eval_genomes(genomes, config):
     for genome_id, genome in genomes:
-        numGames = 10
+        numGames = 20
         for game in range(numGames):
             genome.fitness = 0.0
             net = neat.nn.FeedForwardNetwork.create(genome, config)
@@ -192,7 +136,6 @@ def eval_genomes(genomes, config):
             currentBoard = [[0,0,0,0],[0,1,0,0],[0,0,2,0],[0,0,0,0]]
             h = 4
             while not gameOver:
-                #moveMatrix = net.activate([currentBoard[i][j] for i in range(4) for j in range(4)])
                 moveMatrix = net.activate([currentBoard[i][j]/math.log(h,2) if currentBoard[i][j] !=0 else 0 for i in range(4) for j in range(4)])
                 gameOver = True # This halts the loop if the for loop returns False.
                 for i in sorted(range(4), key=lambda k: moveMatrix[k], reverse = True):
@@ -201,11 +144,9 @@ def eval_genomes(genomes, config):
                     if False in [currentBoard[i][j]==newBoard[i][j] for i in range(4) for j in range(4)]:
                         currentBoard = [row[:] for row in newBoard]
                         h = newHighValue
-                        genome.fitness += (newScore - genome.fitness) * (2.0 * numpy.std(moveMatrix))
+                        #genome.fitness += (newScore - genome.fitness) * (2.0 * numpy.std(moveMatrix) / (max(moveMatrix) if max(moveMatrix) > 1 else 1))
+                        genome.fitness = newScore
                         gameOver = False
-                        #[print([int(2**(i*math.log(h,2))) if i!=0 else 0 for i in row]) for row in currentBoard]
-                        #print("")
-                        #time.sleep(1)
                         break
         genome.fitness = genome.fitness / numGames
 
@@ -215,6 +156,8 @@ def run(config_file):
      neat.DefaultSpeciesSet, neat.DefaultStagnation,
      config_file)
 
+    config.genome_config.add_aggregation('equal',equal)
+
     # Create the population, which is the top-level object for a NEAT run.
     p = neat.Population(config)
 
@@ -222,11 +165,11 @@ def run(config_file):
     p.add_reporter(neat.StdOutReporter(True))
     stats = neat.StatisticsReporter()
     p.add_reporter(stats)
-    p.add_reporter(neat.Checkpointer(1000-1))
+    p.add_reporter(neat.Checkpointer(10000-1))
 
-    # Run for up to 300 generations.
-    winner = p.run(eval_genomes, 10)
+    # Run for up to 1500 generations.
 
+    winner = p.run(eval_genomes, 300)
     # Display the winning genome.
     print('\nBest genome:\n{!s}'.format(winner))
 
@@ -237,6 +180,7 @@ def run(config_file):
     gameOver = False
     currentBoard = [[0,0,0,0],[0,1,0,0],[0,0,2,0],[0,0,0,0]]
     h = 4
+    print(winner_net.activate([currentBoard[i][j]/math.log(h,2) if currentBoard[i][j] !=0 else 0 for i in range(4) for j in range(4)]))
     while not gameOver:
         moveMatrix = winner_net.activate([currentBoard[i][j]/math.log(h,2) if currentBoard[i][j] !=0 else 0 for i in range(4) for j in range(4)])
         gameOver = True
@@ -251,7 +195,7 @@ def run(config_file):
                 #print("")
                 #time.sleep(1)
                 break
-    print("Winning Score: {!r}, highest-valued tile {!r}".format(oldScore, 2**h))
+    print("Winning Score: {!r}, highest-valued tile {!r}".format(oldScore, h))
     print("Final board state: ")
     [print([int(2**i) if i!=0 else 0 for i in row]) for row in currentBoard]
 
@@ -268,7 +212,6 @@ def run(config_file):
 
     #p = neat.Checkpointer.restore_checkpoint('neat-checkpoint-4')
     #p.run(eval_genomes, 10)
-
 
 if __name__ == '__main__':
     # Determine path to configuration file. This path manipulation is
