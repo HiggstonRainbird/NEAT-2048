@@ -128,7 +128,7 @@ def next_move(oldBoard, highValue, score, move):
 
 def eval_genomes(genomes, config):
     for genome_id, genome in genomes:
-        numGames = 20
+        numGames = 100
         for game in range(numGames):
             genome.fitness = 0.0
             net = neat.nn.FeedForwardNetwork.create(genome, config)
