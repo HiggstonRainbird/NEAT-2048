@@ -40,7 +40,6 @@ Finally, a 2 or 4 is spawned randomly in one of the positions currently occupied
     A 4 has a 10% chance of spawning, while a 2 has a 90% chance.
 
 The fitness function is the score of the game, which is incremented by the value of any newly created block.
-    The score is then multiplied by twice the standard deviation of the input vector, as a penalty for having all inputs be the same.
 
 TODO:
     Use cProfile to analyze chokepoints in the code.
