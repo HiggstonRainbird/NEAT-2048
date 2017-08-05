@@ -128,8 +128,9 @@ def next_move(oldBoard, highValue, score, move):
 
 def eval_genomes(genomes, config):
     for genome_id, genome in genomes:
-        numGames = 20
+        numGames = 1
         for game in range(numGames):
+            random.seed(474747)
             genome.fitness = 0.0
             net = neat.nn.FeedForwardNetwork.create(genome, config)
             gameOver = False
@@ -169,13 +170,14 @@ def run(config_file):
 
     # Run for up to 1500 generations.
 
-    winner = p.run(eval_genomes, 300)
+    winner = p.run(eval_genomes, 1000)
     # Display the winning genome.
     print('\nBest genome:\n{!s}'.format(winner))
 
     # Show output of the most fit genome against training data.
     print('\nOutput:')
     winner_net = neat.nn.FeedForwardNetwork.create(winner, config)
+    random.seed(474747)
     oldScore = 0.0
     gameOver = False
     currentBoard = [[0,0,0,0],[0,1,0,0],[0,0,2,0],[0,0,0,0]]
